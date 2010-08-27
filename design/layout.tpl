@@ -4,6 +4,7 @@
     <title>{{title}}</title>
 </head>
 <body>
-        %include
+  <h1>{{title}}</h1>
+  %include
 </body>
 </html>

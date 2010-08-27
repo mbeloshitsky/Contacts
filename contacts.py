@@ -5,24 +5,39 @@ import sqlite3
 
 db = sqlite3.connect('contacts.db')
 
+# По умолчанию на выходе из sqlite возвращается массив. Это не очень
+# удобно, и мы немного переделаем это поведение, чтобы на выходе
+# возвращался хэш.
+def row2dict(cursor, row):
+    d = {}
+    for idx, col in enumerate(cursor.description):
+        d[col[0]] = row[idx]
+    return d
+
+db.row_factory = row2dict
+
+# Настройка БД
 def setupDb():
     db.executescript('''
     --- Поля контактного справочника
     create table fields (
-       cid   int,                --- индекс контакта
-       fkey  int,                --- имя поля
-       value text,               --- значение поля
-       ord   text,               --- Порядок сортировки (-1 - скрытое)
+       cid   int,                      --- индекс контакта
+       fkey  int,                      --- имя поля
+       value text,                     --- значение поля
+       ord   text,                     --- Порядок сортировки 
+                                       --- (-1 - не показывать)
        foreign key(fkey) references i18n(fn)
     );
     
     --- Локализация полей контактного справочника
     create table i18n (
-       fn integer primary key,   --- Индекс                
-       fsysname text,            --- Системное имя (то, что берем из XML).
-       caption text,             --- Заголовок
-       tooltip,                  --- Подсказка-тултип
-       deford                    --- Порядок сортировки по-умолчанию
+       fn       integer primary key,   --- Индекс                
+       fsysname text,                  --- Системное имя (то, 
+                                       --- что берем из XML).
+       caption  text,                  --- Заголовок
+       tooltip  text,                  --- Подсказка-тултип
+       deford   int                    --- Порядок сортировки 
+                                       --- по-умолчанию
     );
 
     --- Индексируем fSystemName т.к. по ней будет производиться
@@ -37,26 +52,63 @@ def setupDb():
 @route('/')
 @view('design/contactList')
 def index():
-    return { 'title': 'ss',
-        'entries': db.execute('''
-            select 
-               caption, tooltip, value, (ord || deford) as ord
-            from 
-               fields
-            inner join 
-               i18n
-            on
-               fkey = fn
-            ''') }
+    return { 'entries' : db.execute('''
+        select 
+           caption, tooltip, value, (ord || deford) as ord
+        from 
+           fields
+        inner join 
+           i18n
+        on
+           fkey = fn
+        order by 
+           cid, ord
+        ''') }
 
 # Форма добавления новых контактов и по совместительству их
 # редактирования.
-@route('/edit/:id')
-@view('contactEditing')
-def create(cid):
-    # TODO: Выборка из БД данных контакта в случае, если мы его
-    # редактируем.
-    return page.fill({'id': cid})
+@route('/create')
+@route('/edit/:cid')
+@view('design/contactEdit')
+def create(cid=''):
+    # Опять же, если нам передали id в качестве параметра, пытаемся
+    # получить данные о контакте из БД и загрузить их в форму. Если же
+    # мы потерпим неудачу, то просто возвращаем новую форму для
+    # создания контакта.
+    return { 'entries' : db.execute('''
+        select 
+           fkey, caption, tooltip, value, (ord || deford) as ord
+        from 
+           fields
+        inner join 
+           i18n
+        on
+           fkey = fn
+        where 
+           cid = ?
+        order by
+           ord
+        ''', (cid or 0)) }
+
+
+# Сюда к нам приходят данные, запощенные пользователем
+@route('/edit', method='POST')
+def post():
+    return ''
+
+# Настройки скрипта. Выводим обрабатываем табличку i18n
+@route('/settings')
+@view('design/settings')
+def settings():
+    return { 'entries' : db.execute('''
+       select
+          fn, fsysname, caption, tooltip, deford
+       from
+          i18n
+       order by
+          deford
+    ''') }
+
 
 # Универсальный фильтр. Фильтрует все, что только можно.
 def filter():

@@ -4,4 +4,4 @@
       {{value}} 
 </span>
 %end
-%rebase design/layout title=title
+%rebase design/layout title='Контактный справочник'

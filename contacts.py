@@ -1,20 +1,24 @@
 # -*- coding: utf-8 -*-
 import bottle
-from bottle import route, view
+from bottle import route, view, request
 import sqlite3
 
 db = sqlite3.connect('contacts.db')
 
 # По умолчанию на выходе из sqlite возвращается массив. Это не очень
 # удобно, и мы немного переделаем это поведение, чтобы на выходе
-# возвращался хэш.
-def row2dict(cursor, row):
-    d = {}
-    for idx, col in enumerate(cursor.description):
-        d[col[0]] = row[idx]
-    return d
+# возвращался хэш. Так мы получим возможность отправлять результаты
+# запросы напрямую в шаблон.
+class Row(object):
+    t = 1
 
-db.row_factory = row2dict
+def row2class(cursor, row):
+    c = Row()
+    for idx, col in enumerate(cursor.description):
+        c.__dict__[col[0]] = row[idx]
+    return c
+
+db.row_factory = row2class
 
 # Настройка БД
 def setupDb():
@@ -31,7 +35,7 @@ def setupDb():
     
     --- Локализация полей контактного справочника
     create table i18n (
-       fn       integer primary key,   --- Индекс                
+       fn       integer primary key autoincrement,
        fsysname text,                  --- Системное имя (то, 
                                        --- что берем из XML).
        caption  text,                  --- Заголовок
@@ -109,6 +113,43 @@ def settings():
           deford
     ''') }
 
+@route('/settings', method='POST')
+def saveSettings():
+    try:
+        fn = int(request.forms.get('fn').strip())
+    except:
+        fn = None
+    try:
+        deford = int(request.forms.get('deford').strip())
+    except:
+        deford = (db.execute('''
+           select 
+              max(deford) as x 
+           from 
+              i18n
+           ''').fetchone().x or 0) + 1
+    caption = request.forms.get('caption').strip()
+    tooltip = request.forms.get('tooltip').strip()
+    fsysname = request.forms.get('fsysname').strip()
+    if fn == None:
+        db.execute('''
+           insert into
+              i18n (fsysname, caption, tooltip, deford)
+           values
+              (?,?,?,?)
+        ''', (fsysname, caption, tooltip, deford))
+    else:
+        db.execute('''
+           update 
+              i18n
+           set 
+              fsysname=?, caption=?, tooltip=?, deford=?
+           where
+              fn=?
+        ''', (fsysname, caption, tooltip, deford, fn))
+    db.commit()
+    return 'ok'
+    
 
 # Универсальный фильтр. Фильтрует все, что только можно.
 def filter():

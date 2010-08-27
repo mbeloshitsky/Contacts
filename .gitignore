@@ -1,0 +1,10 @@
+# Backup files left behind by the Emacs editor.
+*~
+# Lock files used by the Emacs editor.
+.\#*
+# Temporary files used by the vim editor.
+.*.swp
+# Python compiled files
+*.pyc
+# sqlite3 database
+*.db

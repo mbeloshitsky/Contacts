@@ -1,7 +1,11 @@
-%for e in entries:
-<span class="entry" title="{{e.tooltip}}">
-      <span class="c_caption">{{e.caption}}</span> 
-      {{e.value}} 
-</span>
+%for ent in entries:
+<div class="entry">
+  %for f,v in ent.items():
+  <span class="entry {{f}}" title="">
+    <span class="caption">{{f}}</span>
+    {{v}} 
+  </span>
+  %end
+</div>
 %end
 %rebase design/layout title='Контактный справочник'

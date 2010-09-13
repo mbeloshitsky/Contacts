@@ -1,16 +1,12 @@
 <form method="POST" action="/edit">
-%for f in entriy:
-<span class="entry" title="{{f.tooltip}}">
-  %if f._id == 'new': 
-  %   title = 'Новый контакт'
-  %else:
-  %   title = 'Редактировать контакт'
-  %end
-  <input type="hidden" name="cid" value="{{f.cid}}">
-  <input type="hidden" name="fkey" value="{{f.fkey}}">
-  <input name="value" value="{{f.fvalue}}">
-</span>
+%if entry['_id'] == 'new':
+    %title = 'Создать контакт'
+%else:
+    %title = 'Редактировать контакт'
 %end
-<input type="submit" value="Отправить">
+%for f,v in entry.items():
+  <p><strong>{{f}}</strong>:<input name="{{f}}" value="{{v}}"></p>
+%end
+<p><input type="submit" value="Отправить"></p>
 </form>
-%rebase design/layout title=title
+%rebase design/layout title="Редактировать контакт"
